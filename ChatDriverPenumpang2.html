@@ -88,7 +88,6 @@
   <script>
     // Ambil parameter dari URL
     const params = new URLSearchParams(window.location.search);
-
     const firebaseConfig = {
       apiKey: params.get("apiKey"),
       authDomain: params.get("authDomain"),
@@ -98,10 +97,10 @@
       messagingSenderId: params.get("messagingSenderId"),
       appId: params.get("appId")
     };
-
     const orderId = params.get("order_id");
     const userType = params.get("user_type"); // 'driver' / 'penumpang'
     const userId = params.get("user_id");
+    const userName = params.get("user_name") || userType;
 
     if (!firebaseConfig.apiKey || !orderId || !userType || !userId) {
       document.getElementById("status").innerText = "Parameter tidak lengkap!";
@@ -119,6 +118,7 @@
     const messageInput = document.getElementById("message-input");
     const statusDiv = document.getElementById("status");
 
+    // Tampilkan pesan
     function displayMessage(sender, text, timestamp, isSent) {
       const messageDiv = document.createElement("div");
       messageDiv.className = `message ${isSent ? "sent" : "received"}`;
@@ -132,7 +132,10 @@
       const timeSpan = document.createElement("div");
       timeSpan.style.fontSize = "0.75em";
       timeSpan.style.color = "#666";
-      timeSpan.textContent = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      timeSpan.textContent = new Date(timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
       messageDiv.appendChild(senderSpan);
       messageDiv.appendChild(textSpan);
@@ -151,6 +154,7 @@
       const data = {
         sender: userType,
         senderId: userId,
+        senderName: userName,
         text: text,
         timestamp: Date.now()
       };
@@ -164,11 +168,11 @@
       });
     });
 
-    // Baca pesan
+    // Baca pesan masuk
     chatRef.on("child_added", (snap) => {
       const msg = snap.val();
       const isSent = msg.senderId === userId;
-      const senderName = msg.sender === "driver" ? "Driver" : "Penumpang";
+      const senderName = msg.senderName || (msg.sender === "driver" ? "Driver" : "Penumpang");
       displayMessage(senderName, msg.text, msg.timestamp, isSent);
     });
 
@@ -184,9 +188,9 @@
       });
     }
 
-    // Pantau status lawan bicara
-    const lawan = userType === "driver" ? "penumpang" : "driver";
-    const otherStatusRef = database.ref(`status/${orderId}/${lawan}`);
+    // Pantau status lawan
+    const otherType = userType === "driver" ? "penumpang" : "driver";
+    const otherStatusRef = database.ref(`status/${orderId}/${otherType}`);
     otherStatusRef.on("value", (snap) => {
       const val = snap.val();
       if (val && val.lastActive) {
