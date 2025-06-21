@@ -182,13 +182,23 @@
     });
 
     chatRef.on("child_added", (snap) => {
-      const msg = snap.val();
-      const isSent = msg.senderId === userId;
-      const senderName = isSent
-        ? userName
-        : (msg.sender === "driver" ? "Driver" : "Penumpang");
-      displayMessage(senderName, msg.text, msg.timestamp, isSent);
-    });
+  const msg = snap.val();
+  const isSent = msg.senderId === userId;
+  const senderName = isSent
+    ? userName
+    : (msg.sender === "driver" ? "Driver" : "Penumpang");
+
+  displayMessage(senderName, msg.text, msg.timestamp, isSent);
+
+  if (!isSent && window.AppInventor && window.AppInventor.setWebViewString) {
+    const notif = {
+      from: senderName,
+      message: msg.text,
+      timestamp: msg.timestamp
+    };
+    window.AppInventor.setWebViewString(JSON.stringify(notif));
+  }
+});
 
     function updateOnlineStatus() {
       statusRef.set({
