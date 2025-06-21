@@ -184,9 +184,7 @@
     chatRef.on("child_added", (snap) => {
   const msg = snap.val();
   const isSent = msg.senderId === userId;
-  const senderName = isSent
-    ? userName
-    : (msg.sender === "driver" ? "Driver" : "Penumpang");
+  const senderName = msg.senderName || (msg.sender === "driver" ? "Driver" : "Penumpang");
 
   displayMessage(senderName, msg.text, msg.timestamp, isSent);
 
