@@ -7,72 +7,16 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    #chat-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid #ddd;
-    }
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      background: #f0f0f0;
-    }
-    .message {
-      margin-bottom: 10px;
-      padding: 10px 14px;
-      border-radius: 18px;
-      max-width: 70%;
-      word-wrap: break-word;
-    }
-    .sent {
-      background: #dcf8c6;
-      align-self: flex-end;
-      margin-left: 30%;
-    }
-    .received {
-      background: #ffffff;
-      align-self: flex-start;
-      margin-right: 30%;
-      border: 1px solid #ddd;
-    }
-    #message-form {
-      display: flex;
-      padding: 10px;
-      background: #fff;
-      border-top: 1px solid #ccc;
-    }
-    #message-input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-    }
-    #send-button {
-      margin-left: 10px;
-      padding: 10px 20px;
-      background: #128C7E;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-    }
-    #status {
-      padding: 8px;
-      background: #ece5dd;
-      text-align: center;
-      font-size: 12px;
-      color: #666;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+    #chat-container { flex: 1; display: flex; flex-direction: column; border: 1px solid #ddd; }
+    #messages { flex: 1; overflow-y: auto; padding: 10px; background: #f0f0f0; }
+    .message { margin-bottom: 10px; padding: 10px 14px; border-radius: 18px; max-width: 70%; word-wrap: break-word; }
+    .sent { background: #dcf8c6; align-self: flex-end; margin-left: 30%; }
+    .received { background: #fff; align-self: flex-start; margin-right: 30%; border: 1px solid #ddd; }
+    #message-form { display: flex; padding: 10px; background: #fff; border-top: 1px solid #ddd; }
+    #message-input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
+    #send-button { margin-left: 10px; padding: 10px 20px; background: #128C7E; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    #status { padding: 8px; background: #ece5dd; text-align: center; font-size: 12px; color: #666; }
   </style>
 </head>
 <body>
@@ -86,9 +30,9 @@
   </div>
 
   <script>
-    // Konfigurasi Firebase Web (PASTIKAN appId: WEB, bukan android)
+    // Konfigurasi Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyAFWLUF2aH-lD6UTofpRsy1rXbBrLHTag",
+      apiKey: "AIzaSyAFWLUF2aH-lD6UTofpRsy1rXbBrLHTagI",
       authDomain: "chatting-87e87.firebaseapp.com",
       databaseURL: "https://chatting-87e87-default-rtdb.firebaseio.com/",
       projectId: "chatting-87e87",
@@ -96,110 +40,99 @@
       messagingSenderId: "240910634931",
       appId: "1:240910634931:web:49aa4b9a0659d9115045c6"
     };
-
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const database = firebase.database();
 
     // Ambil parameter dari URL
-    const params = new URLSearchParams(location.search);
-    const orderId = params.get("order_id");
-    const userType = params.get("user_type"); // 'driver' atau 'penumpang'
-    const userId = params.get("user_id");
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order_id');
+    const userType = params.get('user_type');
+    const userId = params.get('user_id');
+    const userName = params.get('name') || userType;
 
     if (!orderId || !userType || !userId) {
       document.getElementById('status').textContent = 'Parameter tidak lengkap!';
-      throw new Error("Parameter wajib: order_id, user_type, user_id");
+      throw new Error('Parameter tidak lengkap');
     }
 
-    const messagesDiv = document.getElementById("messages");
-    const messageForm = document.getElementById("message-form");
-    const messageInput = document.getElementById("message-input");
-    const statusDiv = document.getElementById("status");
+    const chatRef = database.ref(`chats/${orderId}`);
+    const statusRef = database.ref(`status/${orderId}/${userType}`);
+    const otherUserType = userType === 'driver' ? 'penumpang' : 'driver';
+    const otherUserStatusRef = database.ref(`status/${orderId}/${otherUserType}`);
 
-    const chatRef = db.ref("chats/" + orderId);
-    const statusRef = db.ref("status/" + orderId + "/" + userType);
-    const otherUser = userType === "driver" ? "penumpang" : "driver";
-    const otherStatusRef = db.ref("status/" + orderId + "/" + otherUser);
+    const messagesDiv = document.getElementById('messages');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const statusDiv = document.getElementById('status');
 
-    // Tampilkan pesan
-    function showMessage(sender, text, timestamp, isSent) {
-      const div = document.createElement("div");
-      div.className = "message " + (isSent ? "sent" : "received");
-
-      const bold = document.createElement("b");
-      bold.textContent = sender + ": ";
-      div.appendChild(bold);
-
-      div.appendChild(document.createTextNode(text));
-
-      const time = document.createElement("div");
-      time.style.fontSize = "0.75em";
-      time.style.color = "#888";
-      time.textContent = formatTime(timestamp);
-      div.appendChild(time);
-
-      messagesDiv.appendChild(div);
+    function displayMessage(sender, text, timestamp, isSent) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+      const senderSpan = document.createElement('span');
+      senderSpan.style.fontWeight = 'bold';
+      senderSpan.textContent = sender + ': ';
+      const textSpan = document.createElement('span');
+      textSpan.textContent = text;
+      const timeSpan = document.createElement('span');
+      timeSpan.style.display = 'block';
+      timeSpan.style.fontSize = '0.8em';
+      timeSpan.style.color = '#666';
+      timeSpan.style.marginTop = '4px';
+      timeSpan.textContent = formatTime(timestamp);
+      messageDiv.appendChild(senderSpan);
+      messageDiv.appendChild(textSpan);
+      messageDiv.appendChild(timeSpan);
+      messagesDiv.appendChild(messageDiv);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    function formatTime(ts) {
-      const d = new Date(ts);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Kirim pesan
-    messageForm.addEventListener("submit", function(e) {
+    messageForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const msg = messageInput.value.trim();
-      if (msg) {
+      const message = messageInput.value.trim();
+      if (message) {
+        const timestamp = Date.now();
         const data = {
-          sender: userType,
+          sender: userName,
           senderId: userId,
-          text: msg,
-          timestamp: Date.now()
+          text: message,
+          timestamp: timestamp
         };
         chatRef.push(data).then(() => {
-          messageInput.value = "";
-          statusRef.set({
-            isOnline: true,
-            lastActive: Date.now()
-          });
+          messageInput.value = '';
+          statusRef.set({ lastActive: timestamp, isOnline: true });
         });
       }
     });
 
-    // Tampilkan pesan baru
-    chatRef.on("child_added", function(snapshot) {
+    chatRef.on('child_added', (snapshot) => {
       const msg = snapshot.val();
-      const sent = msg.senderId === userId;
-      const senderName = msg.sender === "driver" ? "Driver" : "Penumpang";
-      showMessage(senderName, msg.text, msg.timestamp, sent);
+      const isSent = msg.senderId === userId;
+      displayMessage(msg.sender, msg.text, msg.timestamp, isSent);
     });
 
-    // Cek status lawan bicara
-    otherStatusRef.on("value", function(snapshot) {
-      const stat = snapshot.val();
-      if (stat) {
-        const online = stat.isOnline && (Date.now() - stat.lastActive < 300000);
-        statusDiv.textContent = online ? "Online" : "Offline";
-      }
-    });
-
-    // Update status online berkala
-    function updateStatusOnline() {
-      statusRef.set({
-        isOnline: true,
-        lastActive: Date.now()
+    function updateOnlineStatus() {
+      statusRef.set({ lastActive: Date.now(), isOnline: true });
+      window.addEventListener('beforeunload', () => {
+        statusRef.update({ isOnline: false });
       });
     }
 
-    updateStatusOnline();
-    setInterval(updateStatusOnline, 60000);
-
-    // Saat keluar/tab ditutup
-    window.addEventListener("beforeunload", function() {
-      statusRef.update({ isOnline: false });
+    otherUserStatusRef.on('value', (snap) => {
+      const val = snap.val();
+      if (val) {
+        const online = val.isOnline && (Date.now() - val.lastActive) < 300000;
+        statusDiv.textContent = online ? 'Online' : 'Offline';
+      }
     });
+
+    updateOnlineStatus();
+    setInterval(updateOnlineStatus, 60000);
+    statusDiv.textContent = 'Chat siap';
   </script>
 </body>
-</html>
+</html></html>
