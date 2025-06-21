@@ -114,13 +114,6 @@
       border-bottom: 1px solid #ddd;
     }
 
-    .typing-indicator {
-      font-style: italic;
-      color: #999;
-      font-size: 13px;
-      padding: 5px 15px;
-    }
-
     @media (max-width: 480px) {
       .message {
         max-width: 85%;
@@ -151,7 +144,8 @@
     const orderId = params.get("order_id");
     const userType = params.get("user_type"); // 'driver' / 'penumpang'
     const userId = params.get("user_id");
-    const userName = params.get("user_name") || userType;
+    const userName = params.get("user_name") || 
+                   (userType === 'driver' ? 'Iron Driver' : 'Penumpang');
 
     // Konfigurasi Firebase (dummy - ganti dengan yang asli)
     const firebaseConfig = {
@@ -179,20 +173,22 @@
     // Fungsi untuk menampilkan pesan
     function displayMessage(msg) {
       const isSent = msg.senderId === userId;
+      
+      // Tentukan nama pengirim
+      const senderName = msg.senderName || 
+                       (msg.sender === 'driver' ? 'Iron Driver' : 'Penumpang');
+
       const messageDiv = document.createElement("div");
       messageDiv.className = `message ${isSent ? "sent" : "received"}`;
 
-      // Format pesan yang dikirim (tanpa nama pengirim)
       if (isSent) {
         messageDiv.innerHTML = `
           <span>${msg.text}</span>
           <span class="message-time">${formatTime(msg.timestamp)}</span>
         `;
-      } 
-      // Format pesan yang diterima (dengan nama pengirim)
-      else {
+      } else {
         messageDiv.innerHTML = `
-          <div class="sender-name">${msg.senderName}</div>
+          <div class="sender-name">${senderName}</div>
           <span>${msg.text}</span>
           <span class="message-time">${formatTime(msg.timestamp)}</span>
         `;
